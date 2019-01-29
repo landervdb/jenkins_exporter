@@ -15,10 +15,12 @@ package main
 
 import (
 	"flag"
+	"math"
 	"net/http"
 	"os"
 	"sync"
 
+	"github.com/landervdb/jenkins_exporter/jenkins"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/log"
@@ -236,6 +238,92 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	}
 
 	ch <- prometheus.MustNewConstMetric(c.up, prometheus.GaugeValue, up)
+
+	jobPaths := make(chan jenkins.JobPath)
+	go jenkins.GetJobPaths(c.path, jobPaths)
+
+	for jobPath := range jobPaths {
+		job, err := jobPath.Parse()
+		if err != nil {
+			log.Debugf("Failed to parse %s: %v", jobPath, err)
+			continue
+		}
+
+		c.lastBuildNumber.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastBuild.Number))
+		c.lastBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastBuild.Timestamp))
+		c.lastBuildDuration.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastBuild.Duration))
+
+		if job.LastSuccessfulBuild.Number != 0 {
+			c.lastSuccessfulBuildNumber.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastSuccessfulBuild.Number))
+			c.lastSuccessfulBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastSuccessfulBuild.Timestamp))
+			c.lastSuccessfulBuildDuration.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastSuccessfulBuild.Duration))
+		} else {
+			c.lastSuccessfulBuildNumber.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
+			c.lastSuccessfulBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
+			c.lastSuccessfulBuildDuration.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
+		}
+
+		if job.LastUnsuccessfulBuild.Number != 0 {
+			c.lastUnsuccessfulBuildNumber.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastUnsuccessfulBuild.Number))
+			c.lastUnsuccessfulBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastUnsuccessfulBuild.Timestamp))
+			c.lastUnsuccessfulBuildDuration.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastUnsuccessfulBuild.Duration))
+		} else {
+			c.lastUnsuccessfulBuildNumber.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
+			c.lastUnsuccessfulBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
+			c.lastUnsuccessfulBuildDuration.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
+		}
+
+		if job.LastStableBuild.Number != 0 {
+			c.lastStableBuildNumber.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastStableBuild.Number))
+			c.lastStableBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastStableBuild.Timestamp))
+			c.lastStableBuildDuration.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastStableBuild.Duration))
+		} else {
+			c.lastStableBuildNumber.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
+			c.lastStableBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
+			c.lastStableBuildDuration.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
+		}
+
+		if job.LastUnstableBuild.Number != 0 {
+			c.lastUnstableBuildNumber.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastUnstableBuild.Number))
+			c.lastUnstableBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastUnstableBuild.Timestamp))
+			c.lastUnstableBuildDuration.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastUnstableBuild.Duration))
+		} else {
+			c.lastUnstableBuildNumber.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
+			c.lastUnstableBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
+			c.lastUnstableBuildDuration.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
+		}
+
+		if job.LastFailedBuild.Number != 0 {
+			c.lastFailedBuildNumber.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastFailedBuild.Number))
+			c.lastFailedBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastFailedBuild.Timestamp))
+			c.lastFailedBuildDuration.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastFailedBuild.Duration))
+		} else {
+			c.lastFailedBuildNumber.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
+			c.lastFailedBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
+			c.lastFailedBuildDuration.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
+		}
+
+		log.Debugf("Parsed job %s in folder %s", job.Name, job.Folder)
+	}
+
+	c.lastBuildNumber.Collect(ch)
+	c.lastBuildDuration.Collect(ch)
+	c.lastBuildTimestamp.Collect(ch)
+	c.lastSuccessfulBuildNumber.Collect(ch)
+	c.lastSuccessfulBuildDuration.Collect(ch)
+	c.lastSuccessfulBuildTimestamp.Collect(ch)
+	c.lastUnsuccessfulBuildNumber.Collect(ch)
+	c.lastUnsuccessfulBuildDuration.Collect(ch)
+	c.lastUnsuccessfulBuildTimestamp.Collect(ch)
+	c.lastStableBuildNumber.Collect(ch)
+	c.lastStableBuildDuration.Collect(ch)
+	c.lastStableBuildTimestamp.Collect(ch)
+	c.lastUnstableBuildNumber.Collect(ch)
+	c.lastUnstableBuildDuration.Collect(ch)
+	c.lastUnstableBuildTimestamp.Collect(ch)
+	c.lastFailedBuildNumber.Collect(ch)
+	c.lastFailedBuildDuration.Collect(ch)
+	c.lastFailedBuildTimestamp.Collect(ch)
 }
 
 func main() {

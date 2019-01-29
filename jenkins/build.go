@@ -16,7 +16,6 @@ package jenkins
 import (
 	"encoding/xml"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -123,7 +122,6 @@ func parseBuild(path string) (Build, error) {
 
 	build, err := newBuildFromXML(xmlPath)
 	if err != nil {
-		log.Println(err)
 		return build, err
 	}
 
