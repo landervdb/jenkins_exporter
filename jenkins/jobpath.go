@@ -14,8 +14,8 @@
 package jenkins
 
 import (
+	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 )
@@ -38,7 +38,7 @@ func GetJobPaths(path string, resultChan chan<- JobPath) error {
 
 	err := parseJobFolder(path, resultChan)
 	if err != nil {
-		log.Println(err)
+		return err
 	}
 
 	return nil
@@ -46,13 +46,15 @@ func GetJobPaths(path string, resultChan chan<- JobPath) error {
 
 func parseJobFolder(path string, resultChan chan<- JobPath) error {
 
-	parseChildJobs(path, resultChan)
+	childErr := parseChildJobs(path, resultChan)
+	buildErr := parseBuildPath(path, resultChan)
 
-	buildsPath := filepath.Join(path, "builds")
-
-	_, err := os.Stat(buildsPath)
-	if err == nil {
-		resultChan <- JobPath(path)
+	if childErr != nil && buildErr != nil {
+		// Check if config.xml file exists, if so it's an empty Jenkins folder, which we don't care about
+		_, err := os.Stat(filepath.Join(path, "config.xml"))
+		if err != nil {
+			return fmt.Errorf("parsing paths failed: %v, %v", childErr, buildErr)
+		}
 	}
 
 	return nil
@@ -78,9 +80,22 @@ func parseChildJobs(path string, resultChan chan<- JobPath) error {
 
 		err = parseJobFolder(filepath.Join(path, "jobs", jobDir.Name()), resultChan)
 		if err != nil {
-			continue
+			return err
 		}
 	}
+
+	return nil
+}
+
+func parseBuildPath(path string, resultChan chan<- JobPath) error {
+	buildsPath := filepath.Join(path, "builds")
+
+	_, err := os.Stat(buildsPath)
+	if err != nil {
+		return err
+	}
+
+	resultChan <- JobPath(path)
 
 	return nil
 }

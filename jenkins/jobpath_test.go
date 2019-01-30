@@ -14,6 +14,7 @@
 package jenkins
 
 import (
+	"path/filepath"
 	"testing"
 )
 
@@ -52,4 +53,13 @@ func checkPath(path string) bool {
 		}
 	}
 	return false
+}
+
+func TestNonExistentPath(t *testing.T) {
+	resultChan := make(chan JobPath)
+
+	err := GetJobPaths(filepath.Join("testdata", "foobar"), resultChan)
+	if err == nil {
+		t.Error("non existent path should return an error")
+	}
 }

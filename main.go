@@ -17,7 +17,6 @@ import (
 	"flag"
 	"math"
 	"net/http"
-	"os"
 	"sync"
 
 	"github.com/landervdb/jenkins_exporter/jenkins"
@@ -69,7 +68,7 @@ func NewCollector(path string) *Collector {
 		path: path,
 		up: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", "up"),
-			"Could the Jenkins folder be parsed",
+			"Whether the Jenkins path is a valid Jenkins tree",
 			nil,
 			nil),
 		lastBuildNumber: prometheus.NewGaugeVec(prometheus.GaugeOpts{
@@ -229,18 +228,16 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	var up float64 = 1
-
-	_, err := os.Stat(c.path)
-	if err != nil {
-		up = 0
-		log.Errorf("Failed to parse contents of %s", c.path)
-	}
-
-	ch <- prometheus.MustNewConstMetric(c.up, prometheus.GaugeValue, up)
-
 	jobPaths := make(chan jenkins.JobPath)
-	go jenkins.GetJobPaths(c.path, jobPaths)
+	go func() {
+		err := jenkins.GetJobPaths(c.path, jobPaths)
+		if err != nil {
+			log.Errorf("collecting job paths failed: %v", err)
+			ch <- prometheus.MustNewConstMetric(c.up, prometheus.GaugeValue, 0)
+			return
+		}
+		ch <- prometheus.MustNewConstMetric(c.up, prometheus.GaugeValue, 1)
+	}()
 
 	for jobPath := range jobPaths {
 		job, err := jobPath.Parse()
