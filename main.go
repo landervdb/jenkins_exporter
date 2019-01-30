@@ -88,7 +88,7 @@ func NewCollector(path string) *Collector {
 		),
 		lastBuildDuration: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: namespace,
-			Name:      "last_build_duration",
+			Name:      "last_build_duration_seconds",
 			Help:      "Duration of the last build",
 		},
 			[]string{"folder", "job"},
@@ -109,7 +109,7 @@ func NewCollector(path string) *Collector {
 		),
 		lastSuccessfulBuildDuration: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: namespace,
-			Name:      "last_successful_build_duration",
+			Name:      "last_successful_build_duration_seconds",
 			Help:      "Duration of the last successful build",
 		},
 			[]string{"folder", "job"},
@@ -130,7 +130,7 @@ func NewCollector(path string) *Collector {
 		),
 		lastUnsuccessfulBuildDuration: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: namespace,
-			Name:      "last_unsuccessful_build_duration",
+			Name:      "last_unsuccessful_build_duration_seconds",
 			Help:      "Duration of the last unsuccessful build",
 		},
 			[]string{"folder", "job"},
@@ -151,7 +151,7 @@ func NewCollector(path string) *Collector {
 		),
 		lastStableBuildDuration: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: namespace,
-			Name:      "last_stable_build_duration",
+			Name:      "last_stable_build_duration_seconds",
 			Help:      "Duration of the last stable build",
 		},
 			[]string{"folder", "job"},
@@ -172,7 +172,7 @@ func NewCollector(path string) *Collector {
 		),
 		lastUnstableBuildDuration: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: namespace,
-			Name:      "last_unstable_build_duration",
+			Name:      "last_unstable_build_duration_seconds",
 			Help:      "Duration of the last unstable build",
 		},
 			[]string{"folder", "job"},
@@ -193,7 +193,7 @@ func NewCollector(path string) *Collector {
 		),
 		lastFailedBuildDuration: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: namespace,
-			Name:      "last_failed_build_duration",
+			Name:      "last_failed_build_duration_seconds",
 			Help:      "Duration of the last failed build",
 		},
 			[]string{"folder", "job"},
@@ -251,12 +251,12 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 
 		c.lastBuildNumber.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastBuild.Number))
 		c.lastBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastBuild.Timestamp))
-		c.lastBuildDuration.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastBuild.Duration))
+		c.lastBuildDuration.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastBuild.Duration) / 1000)
 
 		if job.LastSuccessfulBuild.Number != 0 {
 			c.lastSuccessfulBuildNumber.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastSuccessfulBuild.Number))
 			c.lastSuccessfulBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastSuccessfulBuild.Timestamp))
-			c.lastSuccessfulBuildDuration.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastSuccessfulBuild.Duration))
+			c.lastSuccessfulBuildDuration.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastSuccessfulBuild.Duration) / 1000)
 		} else {
 			c.lastSuccessfulBuildNumber.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
 			c.lastSuccessfulBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
@@ -266,7 +266,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		if job.LastUnsuccessfulBuild.Number != 0 {
 			c.lastUnsuccessfulBuildNumber.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastUnsuccessfulBuild.Number))
 			c.lastUnsuccessfulBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastUnsuccessfulBuild.Timestamp))
-			c.lastUnsuccessfulBuildDuration.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastUnsuccessfulBuild.Duration))
+			c.lastUnsuccessfulBuildDuration.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastUnsuccessfulBuild.Duration) / 1000)
 		} else {
 			c.lastUnsuccessfulBuildNumber.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
 			c.lastUnsuccessfulBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
@@ -276,7 +276,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		if job.LastStableBuild.Number != 0 {
 			c.lastStableBuildNumber.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastStableBuild.Number))
 			c.lastStableBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastStableBuild.Timestamp))
-			c.lastStableBuildDuration.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastStableBuild.Duration))
+			c.lastStableBuildDuration.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastStableBuild.Duration) / 1000)
 		} else {
 			c.lastStableBuildNumber.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
 			c.lastStableBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
@@ -286,7 +286,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		if job.LastUnstableBuild.Number != 0 {
 			c.lastUnstableBuildNumber.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastUnstableBuild.Number))
 			c.lastUnstableBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastUnstableBuild.Timestamp))
-			c.lastUnstableBuildDuration.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastUnstableBuild.Duration))
+			c.lastUnstableBuildDuration.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastUnstableBuild.Duration) / 1000)
 		} else {
 			c.lastUnstableBuildNumber.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
 			c.lastUnstableBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
@@ -296,7 +296,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		if job.LastFailedBuild.Number != 0 {
 			c.lastFailedBuildNumber.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastFailedBuild.Number))
 			c.lastFailedBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastFailedBuild.Timestamp))
-			c.lastFailedBuildDuration.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastFailedBuild.Duration))
+			c.lastFailedBuildDuration.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastFailedBuild.Duration) / 1000)
 		} else {
 			c.lastFailedBuildNumber.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
 			c.lastFailedBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
