@@ -87,130 +87,148 @@ func NewCollector(path string) *Collector {
 				Help:      "The number of collection failures since the exporter was started",
 			},
 		),
-		lastBuildNumber: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Namespace: namespace,
-			Name:      "last_build_number",
-			Help:      "Build number of the last build",
-		},
+		lastBuildNumber: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace: namespace,
+				Name:      "last_build_number",
+				Help:      "Build number of the last build",
+			},
 			[]string{"folder", "job"},
 		),
-		lastBuildTimestamp: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Namespace: namespace,
-			Name:      "last_build_timestamp",
-			Help:      "Timestamp of the last build",
-		},
+		lastBuildTimestamp: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace: namespace,
+				Name:      "last_build_timestamp",
+				Help:      "Timestamp of the last build",
+			},
 			[]string{"folder", "job"},
 		),
-		lastBuildDuration: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Namespace: namespace,
-			Name:      "last_build_duration_seconds",
-			Help:      "Duration of the last build",
-		},
+		lastBuildDuration: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace: namespace,
+				Name:      "last_build_duration_seconds",
+				Help:      "Duration of the last build",
+			},
 			[]string{"folder", "job"},
 		),
-		lastSuccessfulBuildNumber: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Namespace: namespace,
-			Name:      "last_successful_build_number",
-			Help:      "Build number of the last successful build",
-		},
+		lastSuccessfulBuildNumber: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace: namespace,
+				Name:      "last_successful_build_number",
+				Help:      "Build number of the last successful build",
+			},
 			[]string{"folder", "job"},
 		),
-		lastSuccessfulBuildTimestamp: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Namespace: namespace,
-			Name:      "last_successful_build_timestamp",
-			Help:      "Timestamp of the last successful build",
-		},
+		lastSuccessfulBuildTimestamp: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace: namespace,
+				Name:      "last_successful_build_timestamp",
+				Help:      "Timestamp of the last successful build",
+			},
 			[]string{"folder", "job"},
 		),
-		lastSuccessfulBuildDuration: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Namespace: namespace,
-			Name:      "last_successful_build_duration_seconds",
-			Help:      "Duration of the last successful build",
-		},
+		lastSuccessfulBuildDuration: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace: namespace,
+				Name:      "last_successful_build_duration_seconds",
+				Help:      "Duration of the last successful build",
+			},
 			[]string{"folder", "job"},
 		),
-		lastUnsuccessfulBuildNumber: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Namespace: namespace,
-			Name:      "last_unsuccessful_build_number",
-			Help:      "Build number of the last unsuccessful build",
-		},
+		lastUnsuccessfulBuildNumber: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace: namespace,
+				Name:      "last_unsuccessful_build_number",
+				Help:      "Build number of the last unsuccessful build",
+			},
 			[]string{"folder", "job"},
 		),
-		lastUnsuccessfulBuildTimestamp: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Namespace: namespace,
-			Name:      "last_unsuccessful_build_timestamp",
-			Help:      "Timestamp of the last unsuccessful build",
-		},
+		lastUnsuccessfulBuildTimestamp: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace: namespace,
+				Name:      "last_unsuccessful_build_timestamp",
+				Help:      "Timestamp of the last unsuccessful build",
+			},
 			[]string{"folder", "job"},
 		),
-		lastUnsuccessfulBuildDuration: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Namespace: namespace,
-			Name:      "last_unsuccessful_build_duration_seconds",
-			Help:      "Duration of the last unsuccessful build",
-		},
+		lastUnsuccessfulBuildDuration: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace: namespace,
+				Name:      "last_unsuccessful_build_duration_seconds",
+				Help:      "Duration of the last unsuccessful build",
+			},
 			[]string{"folder", "job"},
 		),
-		lastStableBuildNumber: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Namespace: namespace,
-			Name:      "last_stable_build_number",
-			Help:      "Build number of the last stable build",
-		},
+		lastStableBuildNumber: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace: namespace,
+				Name:      "last_stable_build_number",
+				Help:      "Build number of the last stable build",
+			},
 			[]string{"folder", "job"},
 		),
-		lastStableBuildTimestamp: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Namespace: namespace,
-			Name:      "last_stable_build_timestamp",
-			Help:      "Timestamp of the last stable build",
-		},
+		lastStableBuildTimestamp: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace: namespace,
+				Name:      "last_stable_build_timestamp",
+				Help:      "Timestamp of the last stable build",
+			},
 			[]string{"folder", "job"},
 		),
-		lastStableBuildDuration: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Namespace: namespace,
-			Name:      "last_stable_build_duration_seconds",
-			Help:      "Duration of the last stable build",
-		},
+		lastStableBuildDuration: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace: namespace,
+				Name:      "last_stable_build_duration_seconds",
+				Help:      "Duration of the last stable build",
+			},
 			[]string{"folder", "job"},
 		),
-		lastUnstableBuildNumber: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Namespace: namespace,
-			Name:      "last_unstable_build_number",
-			Help:      "Build number of the last unstable build",
-		},
+		lastUnstableBuildNumber: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace: namespace,
+				Name:      "last_unstable_build_number",
+				Help:      "Build number of the last unstable build",
+			},
 			[]string{"folder", "job"},
 		),
-		lastUnstableBuildTimestamp: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Namespace: namespace,
-			Name:      "last_unstable_build_timestamp",
-			Help:      "Timestamp of the last unstable build",
-		},
+		lastUnstableBuildTimestamp: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace: namespace,
+				Name:      "last_unstable_build_timestamp",
+				Help:      "Timestamp of the last unstable build",
+			},
 			[]string{"folder", "job"},
 		),
-		lastUnstableBuildDuration: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Namespace: namespace,
-			Name:      "last_unstable_build_duration_seconds",
-			Help:      "Duration of the last unstable build",
-		},
+		lastUnstableBuildDuration: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace: namespace,
+				Name:      "last_unstable_build_duration_seconds",
+				Help:      "Duration of the last unstable build",
+			},
 			[]string{"folder", "job"},
 		),
-		lastFailedBuildNumber: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Namespace: namespace,
-			Name:      "last_failed_build_number",
-			Help:      "Build number of the last failed build",
-		},
+		lastFailedBuildNumber: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace: namespace,
+				Name:      "last_failed_build_number",
+				Help:      "Build number of the last failed build",
+			},
 			[]string{"folder", "job"},
 		),
-		lastFailedBuildTimestamp: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Namespace: namespace,
-			Name:      "last_failed_build_timestamp",
-			Help:      "Timestamp of the last failed build",
-		},
+		lastFailedBuildTimestamp: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace: namespace,
+				Name:      "last_failed_build_timestamp",
+				Help:      "Timestamp of the last failed build",
+			},
 			[]string{"folder", "job"},
 		),
-		lastFailedBuildDuration: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Namespace: namespace,
-			Name:      "last_failed_build_duration_seconds",
-			Help:      "Duration of the last failed build",
-		},
+		lastFailedBuildDuration: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace: namespace,
+				Name:      "last_failed_build_duration_seconds",
+				Help:      "Duration of the last failed build",
+			},
 			[]string{"folder", "job"},
 		),
 	}
