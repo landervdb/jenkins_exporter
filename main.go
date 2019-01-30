@@ -15,8 +15,12 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"math"
 	"net/http"
+	"regexp"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -31,6 +35,7 @@ var (
 	bind        = flag.String("metrics.bind", ":9506", "Address to expose the metrics on")
 	path        = flag.String("metrics.path", "/metrics", "Path to expose the metrics on")
 	jenkinsPath = flag.String("jenkins.path", "/var/lib/jenkins", "Path to the Jenkins folder")
+	envVars     = flag.String("jenkins.envvars", "", "Custom environment variables to parse into metrics. Format: ENVVAR1:metric_name;ENVVAR2:metric_name,...")
 	logLevel    = flag.String("log.level", "INFO", "The minimal log level to be displayed")
 )
 
@@ -64,6 +69,7 @@ type Collector struct {
 	lastFailedBuildNumber          *prometheus.GaugeVec
 	lastFailedBuildTimestamp       *prometheus.GaugeVec
 	lastFailedBuildDuration        *prometheus.GaugeVec
+	customGauges                   map[string]*prometheus.GaugeVec
 }
 
 // NewCollector creates an instance of Collector.
@@ -257,6 +263,10 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 	c.lastFailedBuildNumber.Describe(ch)
 	c.lastFailedBuildTimestamp.Describe(ch)
 	c.lastFailedBuildDuration.Describe(ch)
+
+	for _, cg := range c.customGauges {
+		cg.Describe(ch)
+	}
 }
 
 // Collect actually collects all the metrics provided by this Collector and sends them to the provided channel.
@@ -301,6 +311,19 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		c.lastBuildNumber.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastBuild.Number))
 		c.lastBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastBuild.Timestamp))
 		c.lastBuildDuration.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastBuild.Duration) / 1000)
+
+		for ev, cg := range c.customGauges {
+			val, ok := job.LastBuild.EnvVars[ev]
+			if !ok {
+				continue
+			}
+			parsed, err := strconv.ParseFloat(val, 64)
+			if err != nil {
+				log.Debugf("Couldn't parse environment variable %s: %v", ev, err)
+				continue
+			}
+			cg.WithLabelValues(job.Folder, job.Name).Set(parsed)
+		}
 
 		if job.LastSuccessfulBuild.Number != 0 {
 			c.lastSuccessfulBuildNumber.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastSuccessfulBuild.Number))
@@ -375,6 +398,9 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	c.lastFailedBuildDuration.Collect(ch)
 	c.lastFailedBuildTimestamp.Collect(ch)
 
+	for _, cg := range c.customGauges {
+		cg.Collect(ch)
+	}
 }
 
 func doParse(jobPaths <-chan jenkins.JobPath, jobs chan<- jenkins.Job) {
@@ -388,6 +414,39 @@ func doParse(jobPaths <-chan jenkins.JobPath, jobs chan<- jenkins.Job) {
 	}
 }
 
+func createCustomGauges(input string) (map[string]*prometheus.GaugeVec, error) {
+
+	customGauges := make(map[string]*prometheus.GaugeVec)
+
+	if len(input) == 0 {
+		return customGauges, nil
+	}
+
+	pairs := strings.Split(input, ";")
+	for _, pair := range pairs {
+		els := strings.Split(pair, ":")
+		if len(els) != 2 {
+			return customGauges, fmt.Errorf("Custom metrics config format is invalid: %s", input)
+		}
+		envVar := els[0]
+		metricName := els[1]
+		match, err := regexp.MatchString("^[a-zA-Z_]*$", metricName)
+		if err != nil || !match {
+			return customGauges, fmt.Errorf("Provided invalid metric name: %s", metricName)
+		}
+		customGauges[envVar] = prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace: namespace,
+				Name:      fmt.Sprintf("custom_last_%s", metricName),
+				Help:      fmt.Sprintf("Custom metric generated from environment variable %s", envVar),
+			},
+			[]string{"folder", "job"},
+		)
+	}
+
+	return customGauges, nil
+}
+
 func main() {
 
 	flag.Parse()
@@ -397,6 +456,13 @@ func main() {
 	log.Infoln("Build context", version.BuildContext())
 
 	collector := NewCollector(*jenkinsPath)
+
+	customMetrics, err := createCustomGauges(*envVars)
+	if err != nil {
+		log.Fatalf("Error parsing custom metrics config: %v", err)
+	}
+	collector.customGauges = customMetrics
+
 	prometheus.MustRegister(collector)
 	prometheus.MustRegister(version.NewCollector("jenkins_exporter"))
 
