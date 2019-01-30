@@ -45,6 +45,7 @@ type Collector struct {
 	mutex                          sync.Mutex
 	up                             *prometheus.Desc
 	collectDuration                *prometheus.Desc
+	collectFailures                prometheus.Counter
 	lastBuildNumber                *prometheus.GaugeVec
 	lastBuildTimestamp             *prometheus.GaugeVec
 	lastBuildDuration              *prometheus.GaugeVec
@@ -79,6 +80,13 @@ func NewCollector(path string) *Collector {
 			"The time it took to collect the metrics in seconds",
 			nil,
 			nil),
+		collectFailures: prometheus.NewCounter(
+			prometheus.CounterOpts{
+				Namespace: namespace,
+				Name:      "collect_failures",
+				Help:      "The number of collection failures since the exporter was started",
+			},
+		),
 		lastBuildNumber: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: namespace,
 			Name:      "last_build_number",
@@ -212,6 +220,7 @@ func NewCollector(path string) *Collector {
 func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.up
 	ch <- c.collectDuration
+	c.collectFailures.Describe(ch)
 	c.lastBuildNumber.Describe(ch)
 	c.lastBuildTimestamp.Describe(ch)
 	c.lastBuildDuration.Describe(ch)
@@ -250,6 +259,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		if err != nil {
 			log.Errorf("collecting job paths failed: %v", err)
 			ch <- prometheus.MustNewConstMetric(c.up, prometheus.GaugeValue, 0)
+			c.collectFailures.Inc()
 			return
 		}
 		ch <- prometheus.MustNewConstMetric(c.up, prometheus.GaugeValue, 1)
@@ -327,6 +337,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		log.Debugf("Parsed job %s in folder %s", job.Name, job.Folder)
 	}
 
+	c.collectFailures.Collect(ch)
 	c.lastBuildNumber.Collect(ch)
 	c.lastBuildDuration.Collect(ch)
 	c.lastBuildTimestamp.Collect(ch)
