@@ -274,6 +274,8 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
+	log.Info("Started collection")
+
 	startTime := time.Now()
 	defer func() {
 		duration := time.Since(startTime).Seconds()
@@ -430,7 +432,7 @@ func createCustomGauges(input string) (map[string]*prometheus.GaugeVec, error) {
 		}
 		envVar := els[0]
 		metricName := els[1]
-		match, err := regexp.MatchString("^[a-zA-Z_]*$", metricName)
+		match, err := regexp.MatchString("^[a-z_]*$", metricName)
 		if err != nil || !match {
 			return customGauges, fmt.Errorf("Provided invalid metric name: %s", metricName)
 		}
@@ -442,6 +444,7 @@ func createCustomGauges(input string) (map[string]*prometheus.GaugeVec, error) {
 			},
 			[]string{"folder", "job"},
 		)
+		log.Infof("Added custom metric custom_last_%s using %s", metricName, envVar)
 	}
 
 	return customGauges, nil
