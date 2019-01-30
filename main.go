@@ -18,6 +18,7 @@ import (
 	"math"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/landervdb/jenkins_exporter/jenkins"
 	"github.com/prometheus/client_golang/prometheus"
@@ -42,6 +43,7 @@ type Collector struct {
 	path                           string
 	mutex                          sync.Mutex
 	up                             *prometheus.Desc
+	collectDuration                *prometheus.Desc
 	lastBuildNumber                *prometheus.GaugeVec
 	lastBuildTimestamp             *prometheus.GaugeVec
 	lastBuildDuration              *prometheus.GaugeVec
@@ -69,6 +71,11 @@ func NewCollector(path string) *Collector {
 		up: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", "up"),
 			"Whether the Jenkins path is a valid Jenkins tree",
+			nil,
+			nil),
+		collectDuration: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "collect_duration_seconds"),
+			"The time it took to collect the metrics in seconds",
 			nil,
 			nil),
 		lastBuildNumber: prometheus.NewGaugeVec(prometheus.GaugeOpts{
@@ -203,6 +210,7 @@ func NewCollector(path string) *Collector {
 // Describe sends the descriptors of the metrics provided by this Collector to the provided channel.
 func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.up
+	ch <- c.collectDuration
 	c.lastBuildNumber.Describe(ch)
 	c.lastBuildTimestamp.Describe(ch)
 	c.lastBuildDuration.Describe(ch)
@@ -227,6 +235,13 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
+
+	startTime := time.Now()
+	defer func() {
+		duration := time.Since(startTime).Seconds()
+		log.Infof("Collection completed in %f seconds", duration)
+		ch <- prometheus.MustNewConstMetric(c.collectDuration, prometheus.GaugeValue, duration)
+	}()
 
 	jobPaths := make(chan jenkins.JobPath)
 	go func() {
