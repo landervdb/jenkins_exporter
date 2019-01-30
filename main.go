@@ -35,7 +35,8 @@ var (
 )
 
 const (
-	namespace = "jenkins"
+	namespace  = "jenkins"
+	numParsers = 20
 )
 
 // Collector is a Prometheus Collector that fetches and generates the Jenkins metrics.
@@ -254,13 +255,21 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		ch <- prometheus.MustNewConstMetric(c.up, prometheus.GaugeValue, 1)
 	}()
 
-	for jobPath := range jobPaths {
-		job, err := jobPath.Parse()
-		if err != nil {
-			log.Debugf("Failed to parse %s: %v", jobPath, err)
-			continue
-		}
+	jobs := make(chan jenkins.Job)
+	var wg sync.WaitGroup
+	wg.Add(numParsers)
+	for i := 0; i < numParsers; i++ {
+		go func() {
+			doParse(jobPaths, jobs)
+			wg.Done()
+		}()
+	}
+	go func() {
+		wg.Wait()
+		close(jobs)
+	}()
 
+	for job := range jobs {
 		c.lastBuildNumber.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastBuild.Number))
 		c.lastBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastBuild.Timestamp))
 		c.lastBuildDuration.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastBuild.Duration) / 1000)
@@ -336,6 +345,18 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	c.lastFailedBuildNumber.Collect(ch)
 	c.lastFailedBuildDuration.Collect(ch)
 	c.lastFailedBuildTimestamp.Collect(ch)
+
+}
+
+func doParse(jobPaths <-chan jenkins.JobPath, jobs chan<- jenkins.Job) {
+	for jobPath := range jobPaths {
+		job, err := jobPath.Parse()
+		if err != nil {
+			log.Debugf("Failed to parse %s: %v", jobPath, err)
+			continue
+		}
+		jobs <- job
+	}
 }
 
 func main() {
