@@ -88,7 +88,7 @@ func NewCollector(path string) *Collector {
 		lastBuildTimestamp: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
-				Name:      "last_build_timestamp",
+				Name:      "last_build_timestamp_seconds",
 				Help:      "Timestamp of the last build",
 			},
 			[]string{"folder", "job", "result"},
@@ -159,42 +159,37 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	}()
 
 	for job := range jobs {
-		c.lastBuildNumber.WithLabelValues(job.Folder, job.Name, "last").Set(float64(job.LastBuild.Number))
-		c.lastBuildTimestamp.WithLabelValues(job.Folder, job.Name, "last").Set(float64(job.LastBuild.Timestamp))
-		c.lastBuildDuration.WithLabelValues(job.Folder, job.Name, "last").Set(float64(job.LastBuild.Duration) / 1000)
-		populateCustomGauges(job.Folder, job.Name, "last", job.LastBuild, c.customGauges)
-
 		if job.LastSuccessfulBuild.Number != 0 {
 			c.lastBuildNumber.WithLabelValues(job.Folder, job.Name, "successful").Set(float64(job.LastSuccessfulBuild.Number))
-			c.lastBuildTimestamp.WithLabelValues(job.Folder, job.Name, "successful").Set(float64(job.LastSuccessfulBuild.Timestamp))
+			c.lastBuildTimestamp.WithLabelValues(job.Folder, job.Name, "successful").Set(float64(job.LastSuccessfulBuild.Timestamp) / 1000)
 			c.lastBuildDuration.WithLabelValues(job.Folder, job.Name, "successful").Set(float64(job.LastSuccessfulBuild.Duration) / 1000)
 			populateCustomGauges(job.Folder, job.Name, "successful", job.LastSuccessfulBuild, c.customGauges)
 		}
 
 		if job.LastUnsuccessfulBuild.Number != 0 {
 			c.lastBuildNumber.WithLabelValues(job.Folder, job.Name, "unsuccessful").Set(float64(job.LastUnsuccessfulBuild.Number))
-			c.lastBuildTimestamp.WithLabelValues(job.Folder, job.Name, "unsuccessful").Set(float64(job.LastUnsuccessfulBuild.Timestamp))
+			c.lastBuildTimestamp.WithLabelValues(job.Folder, job.Name, "unsuccessful").Set(float64(job.LastUnsuccessfulBuild.Timestamp) / 1000)
 			c.lastBuildDuration.WithLabelValues(job.Folder, job.Name, "unsuccessful").Set(float64(job.LastUnsuccessfulBuild.Duration) / 1000)
 			populateCustomGauges(job.Folder, job.Name, "unsuccessful", job.LastUnsuccessfulBuild, c.customGauges)
 		}
 
 		if job.LastStableBuild.Number != 0 {
 			c.lastBuildNumber.WithLabelValues(job.Folder, job.Name, "stable").Set(float64(job.LastStableBuild.Number))
-			c.lastBuildTimestamp.WithLabelValues(job.Folder, job.Name, "stable").Set(float64(job.LastStableBuild.Timestamp))
+			c.lastBuildTimestamp.WithLabelValues(job.Folder, job.Name, "stable").Set(float64(job.LastStableBuild.Timestamp) / 1000)
 			c.lastBuildDuration.WithLabelValues(job.Folder, job.Name, "stable").Set(float64(job.LastStableBuild.Duration) / 1000)
 			populateCustomGauges(job.Folder, job.Name, "stable", job.LastStableBuild, c.customGauges)
 		}
 
 		if job.LastUnstableBuild.Number != 0 {
 			c.lastBuildNumber.WithLabelValues(job.Folder, job.Name, "unstable").Set(float64(job.LastUnstableBuild.Number))
-			c.lastBuildTimestamp.WithLabelValues(job.Folder, job.Name, "unstable").Set(float64(job.LastUnstableBuild.Timestamp))
+			c.lastBuildTimestamp.WithLabelValues(job.Folder, job.Name, "unstable").Set(float64(job.LastUnstableBuild.Timestamp) / 1000)
 			c.lastBuildDuration.WithLabelValues(job.Folder, job.Name, "unstable").Set(float64(job.LastUnstableBuild.Duration) / 1000)
 			populateCustomGauges(job.Folder, job.Name, "unstable", job.LastUnstableBuild, c.customGauges)
 		}
 
 		if job.LastFailedBuild.Number != 0 {
 			c.lastBuildNumber.WithLabelValues(job.Folder, job.Name, "failed").Set(float64(job.LastFailedBuild.Number))
-			c.lastBuildTimestamp.WithLabelValues(job.Folder, job.Name, "failed").Set(float64(job.LastFailedBuild.Timestamp))
+			c.lastBuildTimestamp.WithLabelValues(job.Folder, job.Name, "failed").Set(float64(job.LastFailedBuild.Timestamp) / 1000)
 			c.lastBuildDuration.WithLabelValues(job.Folder, job.Name, "failed").Set(float64(job.LastFailedBuild.Duration) / 1000)
 			populateCustomGauges(job.Folder, job.Name, "failed", job.LastFailedBuild, c.customGauges)
 		}
