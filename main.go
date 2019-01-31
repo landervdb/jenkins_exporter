@@ -83,7 +83,7 @@ func NewCollector(path string) *Collector {
 				Name:      "last_build_number",
 				Help:      "Build number of the last build",
 			},
-			[]string{"folder", "job", "result"},
+			[]string{"folder", "jenkins_job", "result"},
 		),
 		lastBuildTimestamp: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
@@ -91,7 +91,7 @@ func NewCollector(path string) *Collector {
 				Name:      "last_build_timestamp_seconds",
 				Help:      "Timestamp of the last build",
 			},
-			[]string{"folder", "job", "result"},
+			[]string{"folder", "jenkins_job", "result"},
 		),
 		lastBuildDuration: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
@@ -99,7 +99,7 @@ func NewCollector(path string) *Collector {
 				Name:      "last_build_duration_seconds",
 				Help:      "Duration of the last build",
 			},
-			[]string{"folder", "job", "result"},
+			[]string{"folder", "jenkins_job", "result"},
 		),
 	}
 }
@@ -244,7 +244,7 @@ func createCustomGauges(input string) (map[string]*prometheus.GaugeVec, error) {
 				Name:      fmt.Sprintf("custom_last_%s", metricName),
 				Help:      fmt.Sprintf("Custom metric generated from environment variable %s", envVar),
 			},
-			[]string{"folder", "job", "result"},
+			[]string{"folder", "jenkins_job", "result"},
 		)
 		log.Infof("Added custom metric custom_last_%s using %s", metricName, envVar)
 	}
