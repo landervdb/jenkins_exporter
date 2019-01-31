@@ -16,7 +16,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"math"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -46,30 +45,15 @@ const (
 
 // Collector is a Prometheus Collector that fetches and generates the Jenkins metrics.
 type Collector struct {
-	path                           string
-	mutex                          sync.Mutex
-	up                             *prometheus.Desc
-	collectDuration                *prometheus.Desc
-	collectFailures                prometheus.Counter
-	lastBuildNumber                *prometheus.GaugeVec
-	lastBuildTimestamp             *prometheus.GaugeVec
-	lastBuildDuration              *prometheus.GaugeVec
-	lastSuccessfulBuildNumber      *prometheus.GaugeVec
-	lastSuccessfulBuildTimestamp   *prometheus.GaugeVec
-	lastSuccessfulBuildDuration    *prometheus.GaugeVec
-	lastUnsuccessfulBuildNumber    *prometheus.GaugeVec
-	lastUnsuccessfulBuildTimestamp *prometheus.GaugeVec
-	lastUnsuccessfulBuildDuration  *prometheus.GaugeVec
-	lastStableBuildNumber          *prometheus.GaugeVec
-	lastStableBuildTimestamp       *prometheus.GaugeVec
-	lastStableBuildDuration        *prometheus.GaugeVec
-	lastUnstableBuildNumber        *prometheus.GaugeVec
-	lastUnstableBuildTimestamp     *prometheus.GaugeVec
-	lastUnstableBuildDuration      *prometheus.GaugeVec
-	lastFailedBuildNumber          *prometheus.GaugeVec
-	lastFailedBuildTimestamp       *prometheus.GaugeVec
-	lastFailedBuildDuration        *prometheus.GaugeVec
-	customGauges                   map[string]*prometheus.GaugeVec
+	path               string
+	mutex              sync.Mutex
+	up                 *prometheus.Desc
+	collectDuration    *prometheus.Desc
+	collectFailures    prometheus.Counter
+	lastBuildNumber    *prometheus.GaugeVec
+	lastBuildTimestamp *prometheus.GaugeVec
+	lastBuildDuration  *prometheus.GaugeVec
+	customGauges       map[string]*prometheus.GaugeVec
 }
 
 // NewCollector creates an instance of Collector.
@@ -99,7 +83,7 @@ func NewCollector(path string) *Collector {
 				Name:      "last_build_number",
 				Help:      "Build number of the last build",
 			},
-			[]string{"folder", "job"},
+			[]string{"folder", "job", "result"},
 		),
 		lastBuildTimestamp: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
@@ -107,7 +91,7 @@ func NewCollector(path string) *Collector {
 				Name:      "last_build_timestamp",
 				Help:      "Timestamp of the last build",
 			},
-			[]string{"folder", "job"},
+			[]string{"folder", "job", "result"},
 		),
 		lastBuildDuration: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
@@ -115,127 +99,7 @@ func NewCollector(path string) *Collector {
 				Name:      "last_build_duration_seconds",
 				Help:      "Duration of the last build",
 			},
-			[]string{"folder", "job"},
-		),
-		lastSuccessfulBuildNumber: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Namespace: namespace,
-				Name:      "last_successful_build_number",
-				Help:      "Build number of the last successful build",
-			},
-			[]string{"folder", "job"},
-		),
-		lastSuccessfulBuildTimestamp: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Namespace: namespace,
-				Name:      "last_successful_build_timestamp",
-				Help:      "Timestamp of the last successful build",
-			},
-			[]string{"folder", "job"},
-		),
-		lastSuccessfulBuildDuration: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Namespace: namespace,
-				Name:      "last_successful_build_duration_seconds",
-				Help:      "Duration of the last successful build",
-			},
-			[]string{"folder", "job"},
-		),
-		lastUnsuccessfulBuildNumber: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Namespace: namespace,
-				Name:      "last_unsuccessful_build_number",
-				Help:      "Build number of the last unsuccessful build",
-			},
-			[]string{"folder", "job"},
-		),
-		lastUnsuccessfulBuildTimestamp: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Namespace: namespace,
-				Name:      "last_unsuccessful_build_timestamp",
-				Help:      "Timestamp of the last unsuccessful build",
-			},
-			[]string{"folder", "job"},
-		),
-		lastUnsuccessfulBuildDuration: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Namespace: namespace,
-				Name:      "last_unsuccessful_build_duration_seconds",
-				Help:      "Duration of the last unsuccessful build",
-			},
-			[]string{"folder", "job"},
-		),
-		lastStableBuildNumber: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Namespace: namespace,
-				Name:      "last_stable_build_number",
-				Help:      "Build number of the last stable build",
-			},
-			[]string{"folder", "job"},
-		),
-		lastStableBuildTimestamp: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Namespace: namespace,
-				Name:      "last_stable_build_timestamp",
-				Help:      "Timestamp of the last stable build",
-			},
-			[]string{"folder", "job"},
-		),
-		lastStableBuildDuration: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Namespace: namespace,
-				Name:      "last_stable_build_duration_seconds",
-				Help:      "Duration of the last stable build",
-			},
-			[]string{"folder", "job"},
-		),
-		lastUnstableBuildNumber: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Namespace: namespace,
-				Name:      "last_unstable_build_number",
-				Help:      "Build number of the last unstable build",
-			},
-			[]string{"folder", "job"},
-		),
-		lastUnstableBuildTimestamp: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Namespace: namespace,
-				Name:      "last_unstable_build_timestamp",
-				Help:      "Timestamp of the last unstable build",
-			},
-			[]string{"folder", "job"},
-		),
-		lastUnstableBuildDuration: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Namespace: namespace,
-				Name:      "last_unstable_build_duration_seconds",
-				Help:      "Duration of the last unstable build",
-			},
-			[]string{"folder", "job"},
-		),
-		lastFailedBuildNumber: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Namespace: namespace,
-				Name:      "last_failed_build_number",
-				Help:      "Build number of the last failed build",
-			},
-			[]string{"folder", "job"},
-		),
-		lastFailedBuildTimestamp: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Namespace: namespace,
-				Name:      "last_failed_build_timestamp",
-				Help:      "Timestamp of the last failed build",
-			},
-			[]string{"folder", "job"},
-		),
-		lastFailedBuildDuration: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Namespace: namespace,
-				Name:      "last_failed_build_duration_seconds",
-				Help:      "Duration of the last failed build",
-			},
-			[]string{"folder", "job"},
+			[]string{"folder", "job", "result"},
 		),
 	}
 }
@@ -248,21 +112,6 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 	c.lastBuildNumber.Describe(ch)
 	c.lastBuildTimestamp.Describe(ch)
 	c.lastBuildDuration.Describe(ch)
-	c.lastSuccessfulBuildNumber.Describe(ch)
-	c.lastSuccessfulBuildTimestamp.Describe(ch)
-	c.lastSuccessfulBuildDuration.Describe(ch)
-	c.lastUnsuccessfulBuildNumber.Describe(ch)
-	c.lastUnsuccessfulBuildTimestamp.Describe(ch)
-	c.lastUnsuccessfulBuildDuration.Describe(ch)
-	c.lastStableBuildNumber.Describe(ch)
-	c.lastStableBuildTimestamp.Describe(ch)
-	c.lastStableBuildDuration.Describe(ch)
-	c.lastUnstableBuildNumber.Describe(ch)
-	c.lastUnstableBuildTimestamp.Describe(ch)
-	c.lastUnstableBuildDuration.Describe(ch)
-	c.lastFailedBuildNumber.Describe(ch)
-	c.lastFailedBuildTimestamp.Describe(ch)
-	c.lastFailedBuildDuration.Describe(ch)
 
 	for _, cg := range c.customGauges {
 		cg.Describe(ch)
@@ -310,71 +159,44 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	}()
 
 	for job := range jobs {
-		c.lastBuildNumber.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastBuild.Number))
-		c.lastBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastBuild.Timestamp))
-		c.lastBuildDuration.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastBuild.Duration) / 1000)
-
-		for ev, cg := range c.customGauges {
-			val, ok := job.LastBuild.EnvVars[ev]
-			if !ok {
-				continue
-			}
-			parsed, err := strconv.ParseFloat(val, 64)
-			if err != nil {
-				log.Debugf("Couldn't parse environment variable %s: %v", ev, err)
-				continue
-			}
-			cg.WithLabelValues(job.Folder, job.Name).Set(parsed)
-		}
+		c.lastBuildNumber.WithLabelValues(job.Folder, job.Name, "last").Set(float64(job.LastBuild.Number))
+		c.lastBuildTimestamp.WithLabelValues(job.Folder, job.Name, "last").Set(float64(job.LastBuild.Timestamp))
+		c.lastBuildDuration.WithLabelValues(job.Folder, job.Name, "last").Set(float64(job.LastBuild.Duration) / 1000)
+		populateCustomGauges(job.Folder, job.Name, "last", job.LastBuild, c.customGauges)
 
 		if job.LastSuccessfulBuild.Number != 0 {
-			c.lastSuccessfulBuildNumber.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastSuccessfulBuild.Number))
-			c.lastSuccessfulBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastSuccessfulBuild.Timestamp))
-			c.lastSuccessfulBuildDuration.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastSuccessfulBuild.Duration) / 1000)
-		} else {
-			c.lastSuccessfulBuildNumber.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
-			c.lastSuccessfulBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
-			c.lastSuccessfulBuildDuration.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
+			c.lastBuildNumber.WithLabelValues(job.Folder, job.Name, "successful").Set(float64(job.LastSuccessfulBuild.Number))
+			c.lastBuildTimestamp.WithLabelValues(job.Folder, job.Name, "successful").Set(float64(job.LastSuccessfulBuild.Timestamp))
+			c.lastBuildDuration.WithLabelValues(job.Folder, job.Name, "successful").Set(float64(job.LastSuccessfulBuild.Duration) / 1000)
+			populateCustomGauges(job.Folder, job.Name, "successful", job.LastSuccessfulBuild, c.customGauges)
 		}
 
 		if job.LastUnsuccessfulBuild.Number != 0 {
-			c.lastUnsuccessfulBuildNumber.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastUnsuccessfulBuild.Number))
-			c.lastUnsuccessfulBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastUnsuccessfulBuild.Timestamp))
-			c.lastUnsuccessfulBuildDuration.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastUnsuccessfulBuild.Duration) / 1000)
-		} else {
-			c.lastUnsuccessfulBuildNumber.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
-			c.lastUnsuccessfulBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
-			c.lastUnsuccessfulBuildDuration.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
+			c.lastBuildNumber.WithLabelValues(job.Folder, job.Name, "unsuccessful").Set(float64(job.LastUnsuccessfulBuild.Number))
+			c.lastBuildTimestamp.WithLabelValues(job.Folder, job.Name, "unsuccessful").Set(float64(job.LastUnsuccessfulBuild.Timestamp))
+			c.lastBuildDuration.WithLabelValues(job.Folder, job.Name, "unsuccessful").Set(float64(job.LastUnsuccessfulBuild.Duration) / 1000)
+			populateCustomGauges(job.Folder, job.Name, "unsuccessful", job.LastUnsuccessfulBuild, c.customGauges)
 		}
 
 		if job.LastStableBuild.Number != 0 {
-			c.lastStableBuildNumber.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastStableBuild.Number))
-			c.lastStableBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastStableBuild.Timestamp))
-			c.lastStableBuildDuration.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastStableBuild.Duration) / 1000)
-		} else {
-			c.lastStableBuildNumber.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
-			c.lastStableBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
-			c.lastStableBuildDuration.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
+			c.lastBuildNumber.WithLabelValues(job.Folder, job.Name, "stable").Set(float64(job.LastStableBuild.Number))
+			c.lastBuildTimestamp.WithLabelValues(job.Folder, job.Name, "stable").Set(float64(job.LastStableBuild.Timestamp))
+			c.lastBuildDuration.WithLabelValues(job.Folder, job.Name, "stable").Set(float64(job.LastStableBuild.Duration) / 1000)
+			populateCustomGauges(job.Folder, job.Name, "stable", job.LastStableBuild, c.customGauges)
 		}
 
 		if job.LastUnstableBuild.Number != 0 {
-			c.lastUnstableBuildNumber.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastUnstableBuild.Number))
-			c.lastUnstableBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastUnstableBuild.Timestamp))
-			c.lastUnstableBuildDuration.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastUnstableBuild.Duration) / 1000)
-		} else {
-			c.lastUnstableBuildNumber.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
-			c.lastUnstableBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
-			c.lastUnstableBuildDuration.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
+			c.lastBuildNumber.WithLabelValues(job.Folder, job.Name, "unstable").Set(float64(job.LastUnstableBuild.Number))
+			c.lastBuildTimestamp.WithLabelValues(job.Folder, job.Name, "unstable").Set(float64(job.LastUnstableBuild.Timestamp))
+			c.lastBuildDuration.WithLabelValues(job.Folder, job.Name, "unstable").Set(float64(job.LastUnstableBuild.Duration) / 1000)
+			populateCustomGauges(job.Folder, job.Name, "unstable", job.LastUnstableBuild, c.customGauges)
 		}
 
 		if job.LastFailedBuild.Number != 0 {
-			c.lastFailedBuildNumber.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastFailedBuild.Number))
-			c.lastFailedBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastFailedBuild.Timestamp))
-			c.lastFailedBuildDuration.WithLabelValues(job.Folder, job.Name).Set(float64(job.LastFailedBuild.Duration) / 1000)
-		} else {
-			c.lastFailedBuildNumber.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
-			c.lastFailedBuildTimestamp.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
-			c.lastFailedBuildDuration.WithLabelValues(job.Folder, job.Name).Set(math.NaN())
+			c.lastBuildNumber.WithLabelValues(job.Folder, job.Name, "failed").Set(float64(job.LastFailedBuild.Number))
+			c.lastBuildTimestamp.WithLabelValues(job.Folder, job.Name, "failed").Set(float64(job.LastFailedBuild.Timestamp))
+			c.lastBuildDuration.WithLabelValues(job.Folder, job.Name, "failed").Set(float64(job.LastFailedBuild.Duration) / 1000)
+			populateCustomGauges(job.Folder, job.Name, "failed", job.LastFailedBuild, c.customGauges)
 		}
 
 		log.Debugf("Parsed job %s in folder %s", job.Name, job.Folder)
@@ -384,21 +206,6 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	c.lastBuildNumber.Collect(ch)
 	c.lastBuildDuration.Collect(ch)
 	c.lastBuildTimestamp.Collect(ch)
-	c.lastSuccessfulBuildNumber.Collect(ch)
-	c.lastSuccessfulBuildDuration.Collect(ch)
-	c.lastSuccessfulBuildTimestamp.Collect(ch)
-	c.lastUnsuccessfulBuildNumber.Collect(ch)
-	c.lastUnsuccessfulBuildDuration.Collect(ch)
-	c.lastUnsuccessfulBuildTimestamp.Collect(ch)
-	c.lastStableBuildNumber.Collect(ch)
-	c.lastStableBuildDuration.Collect(ch)
-	c.lastStableBuildTimestamp.Collect(ch)
-	c.lastUnstableBuildNumber.Collect(ch)
-	c.lastUnstableBuildDuration.Collect(ch)
-	c.lastUnstableBuildTimestamp.Collect(ch)
-	c.lastFailedBuildNumber.Collect(ch)
-	c.lastFailedBuildDuration.Collect(ch)
-	c.lastFailedBuildTimestamp.Collect(ch)
 
 	for _, cg := range c.customGauges {
 		cg.Collect(ch)
@@ -442,12 +249,27 @@ func createCustomGauges(input string) (map[string]*prometheus.GaugeVec, error) {
 				Name:      fmt.Sprintf("custom_last_%s", metricName),
 				Help:      fmt.Sprintf("Custom metric generated from environment variable %s", envVar),
 			},
-			[]string{"folder", "job"},
+			[]string{"folder", "job", "result"},
 		)
 		log.Infof("Added custom metric custom_last_%s using %s", metricName, envVar)
 	}
 
 	return customGauges, nil
+}
+
+func populateCustomGauges(folder, job, result string, build jenkins.Build, customGauges map[string]*prometheus.GaugeVec) {
+	for ev, cg := range customGauges {
+		val, ok := build.EnvVars[ev]
+		if !ok {
+			continue
+		}
+		parsed, err := strconv.ParseFloat(val, 64)
+		if err != nil {
+			log.Debugf("Couldn't parse environment variable %s: %v", ev, err)
+			continue
+		}
+		cg.WithLabelValues(folder, job, result).Set(parsed)
+	}
 }
 
 func main() {
