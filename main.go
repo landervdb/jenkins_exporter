@@ -33,6 +33,7 @@ import (
 var (
 	bind        = flag.String("metrics.bind", ":9506", "Address to expose the metrics on")
 	path        = flag.String("metrics.path", "/metrics", "Path to expose the metrics on")
+	ignoreList  = flag.String("jenkins.ignore", "", "Comma-separated list of folders to ignore")
 	jenkinsPath = flag.String("jenkins.path", "/var/lib/jenkins", "Path to the Jenkins folder")
 	envVars     = flag.String("jenkins.envvars", "", "Custom environment variables to parse into metrics. Format: ENVVAR1:metric_name;ENVVAR2:metric_name,...")
 	logLevel    = flag.String("log.level", "INFO", "The minimal log level to be displayed")
@@ -45,7 +46,7 @@ const (
 
 // Collector is a Prometheus Collector that fetches and generates the Jenkins metrics.
 type Collector struct {
-	path               string
+	opts               jenkins.JobPathOpts
 	mutex              sync.Mutex
 	up                 *prometheus.Desc
 	collectDuration    *prometheus.Desc
@@ -57,9 +58,9 @@ type Collector struct {
 }
 
 // NewCollector creates an instance of Collector.
-func NewCollector(path string) *Collector {
+func NewCollector(opts jenkins.JobPathOpts) *Collector {
 	return &Collector{
-		path: path,
+		opts: opts,
 		up: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", "up"),
 			"Whether the Jenkins path is a valid Jenkins tree",
@@ -134,7 +135,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 
 	jobPaths := make(chan jenkins.JobPath)
 	go func() {
-		err := jenkins.GetJobPaths(c.path, jobPaths)
+		err := jenkins.GetJobPaths(c.opts, jobPaths)
 		if err != nil {
 			log.Errorf("collecting job paths failed: %v", err)
 			ch <- prometheus.MustNewConstMetric(c.up, prometheus.GaugeValue, 0)
@@ -275,7 +276,12 @@ func main() {
 	log.Infoln("Starting Jenkins exporter", version.Info())
 	log.Infoln("Build context", version.BuildContext())
 
-	collector := NewCollector(*jenkinsPath)
+	opts := &jenkins.JobPathOpts{
+		Root:       *jenkinsPath,
+		IgnoreList: strings.Split(*ignoreList, ","),
+	}
+
+	collector := NewCollector(*opts)
 
 	customMetrics, err := createCustomGauges(*envVars)
 	if err != nil {

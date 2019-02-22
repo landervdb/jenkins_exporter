@@ -23,6 +23,11 @@ import (
 // JobPath represents a path to a job on the filesystem.
 type JobPath string
 
+type JobPathOpts struct {
+	Root       string
+	IgnoreList []string
+}
+
 // Parse loads the configuration for the job from disk and marshals it into a Job object.
 func (jp JobPath) Parse() (Job, error) {
 	job := Job{
@@ -33,10 +38,10 @@ func (jp JobPath) Parse() (Job, error) {
 }
 
 // GetJobPaths recursively searches a given folder for jobs and puts the JobPaths associated with the discovered jobs on the resultChan channel.
-func GetJobPaths(path string, resultChan chan<- JobPath) error {
+func GetJobPaths(opts JobPathOpts, resultChan chan<- JobPath) error {
 	defer close(resultChan)
 
-	err := parseJobFolder(path, resultChan)
+	err := parseJobFolder(opts.Root, opts, resultChan)
 	if err != nil {
 		return err
 	}
@@ -44,9 +49,22 @@ func GetJobPaths(path string, resultChan chan<- JobPath) error {
 	return nil
 }
 
-func parseJobFolder(path string, resultChan chan<- JobPath) error {
+func contains(needle string, haystack []string) bool {
+	for _, item := range haystack {
+		if item == needle {
+			return true
+		}
+	}
+	return false
+}
 
-	childErr := parseChildJobs(path, resultChan)
+func parseJobFolder(path string, opts JobPathOpts, resultChan chan<- JobPath) error {
+
+	if contains(filepath.Base(path), opts.IgnoreList) {
+		return nil
+	}
+
+	childErr := parseChildJobs(path, opts, resultChan)
 	buildErr := parseBuildPath(path, resultChan)
 
 	if childErr != nil && buildErr != nil {
@@ -60,7 +78,7 @@ func parseJobFolder(path string, resultChan chan<- JobPath) error {
 	return nil
 }
 
-func parseChildJobs(path string, resultChan chan<- JobPath) error {
+func parseChildJobs(path string, opts JobPathOpts, resultChan chan<- JobPath) error {
 	jobsPath := filepath.Join(path, "jobs")
 
 	_, err := os.Stat(jobsPath)
@@ -78,7 +96,7 @@ func parseChildJobs(path string, resultChan chan<- JobPath) error {
 			continue
 		}
 
-		err = parseJobFolder(filepath.Join(path, "jobs", jobDir.Name()), resultChan)
+		err = parseJobFolder(filepath.Join(path, "jobs", jobDir.Name()), opts, resultChan)
 		if err != nil {
 			return err
 		}
