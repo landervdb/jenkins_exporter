@@ -46,16 +46,36 @@ func (job *Job) fetch() error {
 		return fmt.Errorf("%s is not a directory", buildsPath)
 	}
 
-	permalinks, err := parsePermalinks(filepath.Join(buildsPath, "permalinks"))
-	if err != nil {
-		return fmt.Errorf("couldn't parse permalinks for %s: %v", buildsPath, err)
-	}
+	permalinksPath := filepath.Join(buildsPath, "permalinks")
 
-	lastSuccessfulBuildPath := filepath.Join(buildsPath, permalinks["lastSuccessfulBuild"])
-	lastUnsuccessfulBuildPath := filepath.Join(buildsPath, permalinks["lastUnsuccessfulBuild"])
-	lastStableBuildPath := filepath.Join(buildsPath, permalinks["lastStableBuild"])
-	lastUnstableBuildPath := filepath.Join(buildsPath, permalinks["lastUnstableBuild"])
-	lastFailedBuildPath := filepath.Join(buildsPath, permalinks["lastFailedBuild"])
+	var (
+		lastSuccessfulBuildPath   string
+		lastUnsuccessfulBuildPath string
+		lastStableBuildPath       string
+		lastUnstableBuildPath     string
+		lastFailedBuildPath       string
+	)
+
+	if _, err = os.Stat(permalinksPath); os.IsNotExist(err) {
+		// permalinks doesn't exist, assume symlinks
+		lastSuccessfulBuildPath, _ = filepath.EvalSymlinks(filepath.Join(buildsPath, "lastSuccessfulBuild"))
+		lastUnsuccessfulBuildPath, _ = filepath.EvalSymlinks(filepath.Join(buildsPath, "lastUnsuccessfulBuild"))
+		lastStableBuildPath, _ = filepath.EvalSymlinks(filepath.Join(buildsPath, "lastStableBuild"))
+		lastUnstableBuildPath, _ = filepath.EvalSymlinks(filepath.Join(buildsPath, "lastUnstableBuild"))
+		lastFailedBuildPath, _ = filepath.EvalSymlinks(filepath.Join(buildsPath, "lastFailedBuild"))
+	} else {
+		// permalinks does exist
+		permalinks, err := parsePermalinks(permalinksPath)
+		if err != nil {
+			return fmt.Errorf("couldn't parse permalinks for %s: %v", buildsPath, err)
+		}
+
+		lastSuccessfulBuildPath = filepath.Join(buildsPath, permalinks["lastSuccessfulBuild"])
+		lastUnsuccessfulBuildPath = filepath.Join(buildsPath, permalinks["lastUnsuccessfulBuild"])
+		lastStableBuildPath = filepath.Join(buildsPath, permalinks["lastStableBuild"])
+		lastUnstableBuildPath = filepath.Join(buildsPath, permalinks["lastUnstableBuild"])
+		lastFailedBuildPath = filepath.Join(buildsPath, permalinks["lastFailedBuild"])
+	}
 
 	job.LastSuccessfulBuild, _ = parseBuild(lastSuccessfulBuildPath)
 	job.LastUnsuccessfulBuild, _ = parseBuild(lastUnsuccessfulBuildPath)
