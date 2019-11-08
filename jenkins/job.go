@@ -14,9 +14,11 @@
 package jenkins
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -44,18 +46,32 @@ func (job *Job) fetch() error {
 		return fmt.Errorf("%s is not a directory", buildsPath)
 	}
 
-	job.LastSuccessfulBuild, _ = parseBuild(filepath.Join(buildsPath, "lastSuccessfulBuild"))
-	job.LastUnsuccessfulBuild, _ = parseBuild(filepath.Join(buildsPath, "lastUnsuccessfulBuild"))
-	job.LastStableBuild, _ = parseBuild(filepath.Join(buildsPath, "lastStableBuild"))
-	job.LastUnstableBuild, _ = parseBuild(filepath.Join(buildsPath, "lastUnstableBuild"))
-	job.LastFailedBuild, _ = parseBuild(filepath.Join(buildsPath, "lastFailedBuild"))
+	permalinks, err := parsePermalinks(filepath.Join(buildsPath, "permalinks"))
+	if err != nil {
+		return fmt.Errorf("couldn't parse permalinks for %s: %v", buildsPath, err)
+	}
+
+	lastSuccessfulBuildPath := filepath.Join(buildsPath, permalinks["lastSuccessfulBuild"])
+	lastUnsuccessfulBuildPath := filepath.Join(buildsPath, permalinks["lastUnsuccessfulBuild"])
+	lastStableBuildPath := filepath.Join(buildsPath, permalinks["lastStableBuild"])
+	lastUnstableBuildPath := filepath.Join(buildsPath, permalinks["lastUnstableBuild"])
+	lastFailedBuildPath := filepath.Join(buildsPath, permalinks["lastFailedBuild"])
+
+	job.LastSuccessfulBuild, _ = parseBuild(lastSuccessfulBuildPath)
+	job.LastUnsuccessfulBuild, _ = parseBuild(lastUnsuccessfulBuildPath)
+	job.LastStableBuild, _ = parseBuild(lastStableBuildPath)
+	job.LastUnstableBuild, _ = parseBuild(lastUnstableBuildPath)
+	job.LastFailedBuild, _ = parseBuild(lastFailedBuildPath)
 
 	job.LastBuild, err = job.selectLastBuild()
 	if err != nil {
 		return err
 	}
 
-	tokens := strings.Split(job.LastBuild.EnvVars["JOB_NAME"], "/")
+	regex := regexp.MustCompile(`^\S+?\/jobs/`)
+	fixedPath := strings.ReplaceAll(regex.ReplaceAllString(string(job.path), ""), "jobs/", "")
+
+	tokens := strings.Split(fixedPath, "/")
 	job.Name = tokens[len(tokens)-1]
 	if len(tokens) == 1 {
 		job.Folder = "/"
@@ -100,4 +116,29 @@ func (job *Job) selectLastBuild() (Build, error) {
 	}
 
 	return lastBuild, nil
+}
+
+func parsePermalinks(path string) (map[string]string, error) {
+	permalinks := make(map[string]string)
+
+	file, err := os.Open(path)
+	if err != nil {
+		return permalinks, fmt.Errorf("parsing permalinks failed: %v", err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.Split(scanner.Text(), " ")
+		if len(line) != 2 {
+			return permalinks, fmt.Errorf("unexpected amount of tokens (%s)", len(line))
+		}
+		permalinks[line[0]] = line[1]
+	}
+
+	if err := scanner.Err(); err != nil {
+		return permalinks, fmt.Errorf("parsing permalinks failed: %v", err)
+	}
+
+	return permalinks, nil
 }

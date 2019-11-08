@@ -15,6 +15,7 @@ package jenkins
 
 import (
 	"encoding/xml"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -33,7 +34,6 @@ type Build struct {
 }
 
 type buildXML struct {
-	XMLName   xml.Name   `xml:"build"`
 	Result    string     `xml:"result"`
 	Timestamp int        `xml:"timestamp"`
 	Duration  int        `xml:"duration"`
@@ -99,9 +99,9 @@ func newBuildFromXML(path string) (Build, error) {
 	}
 
 	build.EnvVars = build.raw.getEnvVars()
-	buildNumber, err := strconv.ParseInt(build.EnvVars["BUILD_NUMBER"], 10, 64)
+	buildNumber, err := strconv.ParseInt(filepath.Base(filepath.Dir(path)), 0, 0)
 	if err != nil {
-		return build, err
+		return build, fmt.Errorf("couldn't parse build number %s: %v", buildNumber, err)
 	}
 	build.Number = int(buildNumber)
 	build.Timestamp = build.raw.Timestamp
